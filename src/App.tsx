@@ -32,7 +32,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-indigo-50/70 py-6 md:py-8 px-4 font-sans select-none" id="app-container">
+    <div className="min-h-screen bg-indigo-50/70 py-6 md:py-8 px-4 font-sans" id="app-container">
       <div className="max-w-6xl mx-auto flex flex-col gap-8">
         
         {/* Top Premium Navigation Header */}

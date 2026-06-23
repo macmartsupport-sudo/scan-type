@@ -1,6 +1,6 @@
 {
   "name": "scantype",
   "description": "Scan images of text, code, or receipts to automatically type them out, fill structured forms, or practice typing on an interactive interface.",
-  "requestFramePermissions": ["camera"],
+  "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

@@ -454,9 +454,9 @@ export default function AutoTyper({ document: doc, config, onChangeConfig }: Aut
                   >
                     {displayText}
                     {showConfidenceHighlights && (
-                      <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 absolute bottom-full left-1/2 transform -translate-x-1/2 -translate-y-1.5 mb-1.5 bg-slate-950/95 text-[10px] text-white px-2.5 py-1 rounded-xl shadow-2xl z-40 whitespace-nowrap pointer-events-none font-sans flex items-center gap-1.5 border border-slate-800 tracking-normal leading-normal">
-                        <span className={`w-1.5 h-1.5 rounded-full ${isLow ? 'bg-amber-400 animate-ping' : 'bg-emerald-400'}`} />
-                        <span>OCR Confidence: <strong className={isLow ? 'text-amber-300' : 'text-emerald-300'}>{token.confidence}%</strong></span>
+                      <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 absolute bottom-full left-1/2 transform -translate-x-1/2 -translate-y-1.5 mb-1.5 bg-slate-950/95 text-[10px] text-white px-2.5 py-1 rounded-xl shadow-2xl z-40 whitespace-nowrap pointer-events-none font-sans flex items-center gap-1.5 border border-slate-800 tracking-normal leading-normal select-none">
+                        <span className={`w-1.5 h-1.5 rounded-full ${isLow ? 'bg-amber-400 animate-ping' : 'bg-emerald-400'} select-none`} />
+                        <span className="select-none">OCR Confidence: <strong className={`${isLow ? 'text-amber-300' : 'text-emerald-300'} select-none`}>{token.confidence}%</strong></span>
                       </span>
                     )}
                   </span>
