@@ -12,7 +12,7 @@ export interface ScannedDocument {
   suggestedFilename: string;
 }
 
-export type TypingSpeed = "slow" | "medium" | "fast" | "instant" | "human";
+export type TypingSpeed = "slow" | "medium" | "fast" | "instant" | "human" | "custom";
 
 export interface TypingConfig {
   speed: TypingSpeed;
