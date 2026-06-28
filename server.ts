@@ -120,7 +120,7 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label = "Request
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function generateContentWithRetry(client: GoogleGenAI, params: any) {
-  const modelsToTry = ["gemini-3.5-flash", "gemini-2.5-flash", "gemini-flash-latest", "gemini-3.1-flash-lite"];
+  const modelsToTry = ["gemini-2.5-flash", "gemini-3.5-flash", "gemini-flash-latest", "gemini-3.1-flash-lite"];
   const errors: string[] = [];
   let lastError: any = null;
 

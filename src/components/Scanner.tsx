@@ -728,7 +728,7 @@ export default function Scanner({ onScanComplete, isLoading, setIsLoading }: Sca
               
               <div className="flex justify-between items-center text-[10px] text-slate-400 font-sans">
                 <span>Phase: Intelligent OCR Visual Extraction</span>
-                <span>Optimized Pool: Gemini 3.5 &amp; 2.5 Flash</span>
+                <span>Primary Model: Gemini 2.5 Flash</span>
               </div>
             </div>
           )}
