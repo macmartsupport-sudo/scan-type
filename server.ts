@@ -75,11 +75,30 @@ async function generateContentWithRetry(client: GoogleGenAI, params: any, maxRet
   const combinedErrorMessage = `All attempted Gemini models failed. Details:\n${errors.join("\n")}`;
   console.error(combinedErrorMessage);
   
+  // Extract clean human-readable details from the last error if it is a stringified JSON
+  let details = "Service Unavailable";
+  if (lastError) {
+    if (lastError.message) {
+      try {
+        const parsed = JSON.parse(lastError.message);
+        if (parsed?.error?.message) {
+          details = parsed.error.message;
+        } else {
+          details = lastError.message;
+        }
+      } catch {
+        details = lastError.message;
+      }
+    } else {
+      details = String(lastError);
+    }
+  }
+
   // Create a clean user-facing error message with helpful advice
   const userFriendlyError = new Error(
     "The translation/OCR AI service is currently experiencing extremely high demand. " +
     "Please try again in a few moments, or check if your API Key in Settings is correctly configured. " +
-    `[Technical Details: ${lastError?.message || lastError || "Service Unavailable"}]`
+    `[Technical Details: ${details}]`
   );
   
   throw userFriendlyError;
