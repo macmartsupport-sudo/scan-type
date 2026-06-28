@@ -567,14 +567,12 @@ export default function AutoTyper({ document: doc, config, onChangeConfig }: Aut
                 const handleMouseEnter = (e: MouseEvent<HTMLSpanElement>) => {
                   if (!showConfidenceHighlights) return;
                   const el = e.currentTarget;
-                  const offsetLeft = el.offsetLeft;
-                  const offsetTop = el.offsetTop;
-                  const offsetWidth = el.offsetWidth;
+                  const rect = el.getBoundingClientRect();
                   setHoveredToken({
                     text: token.text,
                     confidence: token.confidence,
-                    x: offsetLeft + offsetWidth / 2,
-                    y: offsetTop - 6,
+                    x: rect.left + rect.width / 2,
+                    y: rect.top - 6,
                   });
                 };
 
@@ -602,35 +600,6 @@ export default function AutoTyper({ document: doc, config, onChangeConfig }: Aut
               <Keyboard className="w-12 h-12 text-slate-200 mb-3 animate-bounce" />
               <p className="text-sm font-semibold text-slate-500 font-sans">Ready to begin</p>
               <p className="text-xs text-slate-400 font-sans mt-1">Tap 'Start Auto-Type' to watch the visual transcription live</p>
-            </div>
-          )}
-
-          {/* Render single shared hover tooltip completely outside the selectable text tree */}
-          {showConfidenceHighlights && hoveredToken && (
-            <div
-              style={{
-                position: "absolute",
-                left: `${hoveredToken.x}px`,
-                top: `${hoveredToken.y}px`,
-                transform: "translate(-50%, -100%)",
-              }}
-              className="pointer-events-none bg-slate-950/95 text-[10px] text-white px-2.5 py-1 rounded-xl shadow-2xl z-40 whitespace-nowrap font-sans flex items-center gap-1.5 border border-slate-800 tracking-normal leading-normal select-none"
-            >
-              <style>{`
-                .nocopy-tooltip-text::before {
-                  content: "OCR Confidence: ";
-                }
-                .nocopy-tooltip-val::before {
-                  content: attr(data-confidence);
-                }
-              `}</style>
-              <span className={`w-1.5 h-1.5 rounded-full ${hoveredToken.confidence < 80 ? 'bg-amber-400 animate-ping' : 'bg-emerald-400'} select-none`} />
-              <span className="select-none nocopy-tooltip-text text-slate-200">
-                <strong 
-                  data-confidence={`${hoveredToken.confidence}%`}
-                  className={`nocopy-tooltip-val select-none ${hoveredToken.confidence < 80 ? 'text-amber-300' : 'text-emerald-300'}`} 
-                />
-              </span>
             </div>
           )}
         </div>
@@ -665,6 +634,35 @@ export default function AutoTyper({ document: doc, config, onChangeConfig }: Aut
           </button>
         </div>
       </div>
+
+      {/* Render single shared hover tooltip completely outside the selectable text tree with fixed positioning */}
+      {showConfidenceHighlights && hoveredToken && (
+        <div
+          style={{
+            position: "fixed",
+            left: `${hoveredToken.x}px`,
+            top: `${hoveredToken.y}px`,
+            transform: "translate(-50%, -100%)",
+          }}
+          className="pointer-events-none bg-slate-950/95 text-[10px] text-white px-2.5 py-1 rounded-xl shadow-2xl z-50 whitespace-nowrap font-sans flex items-center gap-1.5 border border-slate-800 tracking-normal leading-normal select-none"
+        >
+          <style>{`
+            .nocopy-tooltip-text::before {
+              content: "OCR Confidence: ";
+            }
+            .nocopy-tooltip-val::before {
+              content: attr(data-confidence);
+            }
+          `}</style>
+          <span className={`w-1.5 h-1.5 rounded-full ${hoveredToken.confidence < 80 ? 'bg-amber-400 animate-ping' : 'bg-emerald-400'} select-none`} />
+          <span className="select-none nocopy-tooltip-text text-slate-200">
+            <strong 
+              data-confidence={`${hoveredToken.confidence}%`}
+              className={`nocopy-tooltip-val select-none ${hoveredToken.confidence < 80 ? 'text-amber-300' : 'text-emerald-300'}`} 
+            />
+          </span>
+        </div>
+      )}
     </div>
   );
 }
