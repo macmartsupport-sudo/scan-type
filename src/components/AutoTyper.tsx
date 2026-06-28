@@ -616,8 +616,21 @@ export default function AutoTyper({ document: doc, config, onChangeConfig }: Aut
               }}
               className="pointer-events-none bg-slate-950/95 text-[10px] text-white px-2.5 py-1 rounded-xl shadow-2xl z-40 whitespace-nowrap font-sans flex items-center gap-1.5 border border-slate-800 tracking-normal leading-normal select-none"
             >
+              <style>{`
+                .nocopy-tooltip-text::before {
+                  content: "OCR Confidence: ";
+                }
+                .nocopy-tooltip-val::before {
+                  content: attr(data-confidence);
+                }
+              `}</style>
               <span className={`w-1.5 h-1.5 rounded-full ${hoveredToken.confidence < 80 ? 'bg-amber-400 animate-ping' : 'bg-emerald-400'} select-none`} />
-              <span className="select-none">OCR Confidence: <strong className={`${hoveredToken.confidence < 80 ? 'text-amber-300' : 'text-emerald-300'} select-none`}>{hoveredToken.confidence}%</strong></span>
+              <span className="select-none nocopy-tooltip-text text-slate-200">
+                <strong 
+                  data-confidence={`${hoveredToken.confidence}%`}
+                  className={`nocopy-tooltip-val select-none ${hoveredToken.confidence < 80 ? 'text-amber-300' : 'text-emerald-300'}`} 
+                />
+              </span>
             </div>
           )}
         </div>
