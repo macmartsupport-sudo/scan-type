@@ -30,7 +30,7 @@ async function generateContentWithRetry(client: GoogleGenAI, params: any, maxRet
   let lastError: any = null;
 
   for (const model of modelsToTry) {
-    let delay = 1500;
+    let delay = 1000;
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         console.log(`Attempting scan with model: ${model}, attempt ${attempt}/${maxRetries}`);
@@ -42,18 +42,26 @@ async function generateContentWithRetry(client: GoogleGenAI, params: any, maxRet
         return response;
       } catch (err: any) {
         lastError = err;
-        const errStr = String(err?.message || err?.status || err || "");
-        const is503OrRateLimit = errStr.includes("503") || 
-                                 errStr.includes("UNAVAILABLE") || 
-                                 errStr.includes("demand") || 
-                                 errStr.includes("429") || 
-                                 errStr.includes("ResourceExhausted") ||
-                                 errStr.includes("limit");
+        const errStr = String(err?.message || err?.status || err || JSON.stringify(err) || "");
+        
+        const is503OrUnavailable = errStr.includes("503") || 
+                                   errStr.includes("UNAVAILABLE") || 
+                                   errStr.includes("demand");
+        
+        const isRateLimit = errStr.includes("429") || 
+                            errStr.includes("ResourceExhausted") ||
+                            errStr.includes("limit");
 
-        if (is503OrRateLimit && attempt < maxRetries) {
-          console.warn(`Gemini API 503/429/Unavailable encountered on ${model} (attempt ${attempt}/${maxRetries}). Retrying in ${delay}ms... Error details: ${errStr}`);
+        if (is503OrUnavailable) {
+          // 503 means the model is overloaded. Immediately break from this model and try the next fallback model!
+          const failureMsg = `Model ${model} is experiencing high demand (503/Unavailable). Switching to next available model immediately without waiting. Error: ${errStr}`;
+          console.warn(failureMsg);
+          errors.push(failureMsg);
+          break; // break the attempt loop to try the next model in modelsToTry
+        } else if (isRateLimit && attempt < maxRetries) {
+          console.warn(`Gemini API rate limit (429) encountered on ${model} (attempt ${attempt}/${maxRetries}). Retrying in ${delay}ms... Error details: ${errStr}`);
           await new Promise((resolve) => setTimeout(resolve, delay));
-          delay = delay * 2 + Math.random() * 500; // exponential backoff with jitter
+          delay = delay * 2 + Math.random() * 300; // exponential backoff with jitter
         } else {
           const failureMsg = `Model ${model} failed on attempt ${attempt}/${maxRetries}: ${errStr}`;
           console.error(failureMsg);
