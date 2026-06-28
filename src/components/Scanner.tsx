@@ -115,6 +115,10 @@ export default function Scanner({ onScanComplete, isLoading, setIsLoading }: Sca
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [scanSpeedEstimate, setScanSpeedEstimate] = useState<string>("");
   const [documentLanguage, setDocumentLanguage] = useState<string>("auto");
+  
+  // High fidelity loading progress indicators (Requirement 5)
+  const [progressPercentage, setProgressPercentage] = useState<number>(0);
+  const [progressPhase, setProgressPhase] = useState<string>("");
 
   // Interactive zoom modal verification states
   const [isZoomModalOpen, setIsZoomModalOpen] = useState(false);
@@ -260,11 +264,38 @@ export default function Scanner({ onScanComplete, isLoading, setIsLoading }: Sca
 
     setIsLoading(true);
     setErrorMessage(null);
-    setScanSpeedEstimate("Consulting Gemini Core...");
+    setProgressPercentage(0);
+    setProgressPhase("Initializing secure connection & uploading image payload...");
 
-    const quoteTimer = setTimeout(() => {
-      setScanSpeedEstimate("Translating pixels to glyphs...");
-    }, 2800);
+    // Smooth incremental progress tracker (Requirement 5)
+    let currentPercent = 0;
+    const progressTimer = setInterval(() => {
+      currentPercent += Math.floor(Math.random() * 4) + 1; // slow realistic crawl
+      
+      if (currentPercent > 95) {
+        currentPercent = 95;
+        setProgressPhase("AI service is busy or queueing (this might take up to a minute)...");
+      } else {
+        if (currentPercent < 20) {
+          setProgressPhase("Initializing secure connection & uploading image payload...");
+        } else if (currentPercent < 45) {
+          setProgressPhase("Analyzing visual layout structure & optimizing margins...");
+        } else if (currentPercent < 70) {
+          setProgressPhase("Running visual OCR intelligence models on glyph structures...");
+        } else if (currentPercent < 88) {
+          setProgressPhase("Classifying document type and generating schema elements...");
+        } else {
+          setProgressPhase("Finalizing transcription stream and attributes mapping...");
+        }
+      }
+      setProgressPercentage(currentPercent);
+    }, 400);
+
+    // Timeout controller - 90 seconds timeout (Requirement 6)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+    }, 90000);
 
     try {
       const response = await fetch("/api/scan", {
@@ -274,7 +305,8 @@ export default function Scanner({ onScanComplete, isLoading, setIsLoading }: Sca
           image: selectedImage, 
           mimeType: "image/jpeg",
           language: documentLanguage
-        })
+        }),
+        signal: controller.signal
       });
 
       if (!response.ok) {
@@ -299,27 +331,52 @@ export default function Scanner({ onScanComplete, isLoading, setIsLoading }: Sca
 
       const rawBodyText = await response.text();
       const scannedDoc = JSON.parse(rawBodyText);
+      
+      // Complete progress smoothly
+      setProgressPercentage(100);
+      setProgressPhase("Scan completed successfully!");
+      
+      // Delay slightly so user can enjoy the 100% completion layout
+      await new Promise((resolve) => setTimeout(resolve, 300));
       onScanComplete(scannedDoc);
+
     } catch (err: any) {
-      console.error(err);
-      setErrorMessage(err.message || "Failed to scan the image. Try another file or a preset.");
+      console.error("Scan click error:", err);
+      if (err.name === "AbortError") {
+        setErrorMessage("Request timed out: The AI service took too long to respond. Please try again.");
+      } else {
+        setErrorMessage(err.message || "Failed to scan the image. Try another file or a preset.");
+      }
     } finally {
-      clearTimeout(quoteTimer);
+      clearTimeout(timeoutId);
+      clearInterval(progressTimer);
       setIsLoading(false);
-      setScanSpeedEstimate("");
+      setProgressPercentage(0);
+      setProgressPhase("");
     }
   };
 
   const triggerPreset = (presetData: ScannedDocument) => {
+    if (isLoading) return; // Prevent multiple clicks/actions
     setIsLoading(true);
     setErrorMessage(null);
-    setScanSpeedEstimate("Loading high-fidelity preset...");
+    setProgressPercentage(0);
+    setProgressPhase("Loading high-fidelity preset...");
+
+    let currentPercent = 0;
+    const progressTimer = setInterval(() => {
+      currentPercent += 15;
+      if (currentPercent > 100) currentPercent = 100;
+      setProgressPercentage(currentPercent);
+    }, 100);
 
     // Tiny artificial timeout for gorgeous cinematic layout transition
     setTimeout(() => {
+      clearInterval(progressTimer);
       onScanComplete(presetData);
       setIsLoading(false);
-      setScanSpeedEstimate("");
+      setProgressPercentage(0);
+      setProgressPhase("");
     }, 850);
   };
 
@@ -338,8 +395,13 @@ export default function Scanner({ onScanComplete, isLoading, setIsLoading }: Sca
             {!isCameraActive ? (
               <button
                 type="button"
+                disabled={isLoading}
                 onClick={startCamera}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-600 bg-white hover:bg-slate-50 border border-slate-200 rounded-lg transition-colors cursor-pointer"
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border rounded-lg transition-colors ${
+                  isLoading
+                    ? "text-slate-300 bg-slate-50 border-slate-100 cursor-not-allowed"
+                    : "text-slate-600 bg-white hover:bg-slate-50 border-slate-200 cursor-pointer"
+                }`}
                 id="btn-trigger-camera"
               >
                 <Camera className="w-3.5 h-3.5 text-slate-500" />
@@ -348,8 +410,13 @@ export default function Scanner({ onScanComplete, isLoading, setIsLoading }: Sca
             ) : (
               <button
                 type="button"
+                disabled={isLoading}
                 onClick={stopCamera}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-100 rounded-lg transition-colors cursor-pointer"
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold border rounded-lg transition-colors ${
+                  isLoading
+                    ? "text-slate-300 bg-slate-50 border-slate-100 cursor-not-allowed"
+                    : "text-rose-600 bg-rose-50 hover:bg-rose-100 border-rose-100 cursor-pointer"
+                }`}
                 id="btn-close-camera"
               >
                 <RefreshCw className="w-3.5 h-3.5 animate-spin" />
@@ -382,12 +449,17 @@ export default function Scanner({ onScanComplete, isLoading, setIsLoading }: Sca
               <div className="absolute bottom-4 left-0 right-0 flex justify-center px-4">
                 <button
                   type="button"
+                  disabled={isLoading}
                   onClick={capturePhoto}
-                  className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-sm font-semibold shadow-lg shadow-emerald-700/20 flex items-center gap-2 cursor-pointer transition-transform transform active:scale-95"
+                  className={`px-6 py-2.5 rounded-xl text-sm font-semibold flex items-center gap-2 transition-transform ${
+                    isLoading
+                      ? "bg-slate-800 text-slate-500 cursor-not-allowed"
+                      : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-700/20 cursor-pointer active:scale-95"
+                  }`}
                   id="btn-capture-snapshot"
                 >
                   <Camera className="w-4 h-4" />
-                  Capture & Load Image
+                  Capture &amp; Load Image
                 </button>
               </div>
             </div>
@@ -403,11 +475,16 @@ export default function Scanner({ onScanComplete, isLoading, setIsLoading }: Sca
               <div className="absolute top-2 right-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button
                   type="button"
+                  disabled={isLoading}
                   onClick={() => {
                     resetZoomAndPan();
                     setIsZoomModalOpen(true);
                   }}
-                  className="p-1.5 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg text-xs font-semibold cursor-pointer border border-indigo-500 flex items-center gap-1 shadow-sm"
+                  className={`p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 shadow-sm ${
+                    isLoading
+                      ? "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-50"
+                      : "bg-indigo-600 text-white hover:bg-indigo-700 border border-indigo-500 cursor-pointer"
+                  }`}
                   id="btn-zoom-interactive"
                 >
                   <ZoomIn className="w-3.5 h-3.5" />
@@ -415,16 +492,26 @@ export default function Scanner({ onScanComplete, isLoading, setIsLoading }: Sca
                 </button>
                 <button
                   type="button"
+                  disabled={isLoading}
                   onClick={() => setSelectedImage(null)}
-                  className="p-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs font-semibold cursor-pointer border border-rose-200"
+                  className={`p-1.5 rounded-lg text-xs font-semibold border ${
+                    isLoading
+                      ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-50"
+                      : "bg-rose-50 text-rose-600 hover:bg-rose-100 border-rose-200 cursor-pointer"
+                  }`}
                   id="btn-clear-photo"
                 >
                   Remove File
                 </button>
                 <button
                   type="button"
+                  disabled={isLoading}
                   onClick={triggerSearch}
-                  className="p-1.5 bg-white text-slate-700 hover:bg-slate-50 rounded-lg text-xs font-semibold cursor-pointer border border-slate-200"
+                  className={`p-1.5 rounded-lg text-xs font-semibold border ${
+                    isLoading
+                      ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed opacity-50"
+                      : "bg-white text-slate-700 hover:bg-slate-50 border-slate-200 cursor-pointer"
+                  }`}
                   id="btn-replace-photo"
                 >
                   Replace
@@ -436,11 +523,13 @@ export default function Scanner({ onScanComplete, isLoading, setIsLoading }: Sca
                 <span>Want to check transcription accuracy?</span>
                 <button
                   type="button"
+                  disabled={isLoading}
                   onClick={() => {
+                    if (isLoading) return;
                     resetZoomAndPan();
                     setIsZoomModalOpen(true);
                   }}
-                  className="text-emerald-400 font-extrabold hover:underline"
+                  className={`font-extrabold ${isLoading ? "text-slate-400 cursor-not-allowed" : "text-emerald-400 hover:underline cursor-pointer"}`}
                 >
                   Launch Live Zoom
                 </button>
@@ -449,15 +538,17 @@ export default function Scanner({ onScanComplete, isLoading, setIsLoading }: Sca
           ) : (
             /* Drag & Drop empty state */
             <div
-              onDragEnter={handleDrag}
-              onDragOver={handleDrag}
-              onDragLeave={handleDrag}
-              onDrop={handleDrop}
-              onClick={triggerSearch}
-              className={`border-2 border-dashed rounded-xl p-8 text-center flex flex-col items-center justify-center cursor-pointer transition-all ${
-                dragActive
-                  ? "border-emerald-500 bg-emerald-50/40 text-emerald-600Scale shadow-sm"
-                  : "border-slate-200 hover:border-slate-300 bg-slate-50/50 text-slate-500 hover:bg-slate-50/80"
+              onDragEnter={isLoading ? undefined : handleDrag}
+              onDragOver={isLoading ? undefined : handleDrag}
+              onDragLeave={isLoading ? undefined : handleDrag}
+              onDrop={isLoading ? undefined : handleDrop}
+              onClick={isLoading ? undefined : triggerSearch}
+              className={`border-2 border-dashed rounded-xl p-8 text-center flex flex-col items-center justify-center transition-all ${
+                isLoading
+                  ? "border-slate-100 bg-slate-50/20 text-slate-300 cursor-not-allowed"
+                  : dragActive
+                  ? "border-emerald-500 bg-emerald-50/40 text-emerald-600Scale shadow-sm cursor-pointer"
+                  : "border-slate-200 hover:border-slate-300 bg-slate-50/50 text-slate-500 hover:bg-slate-50/80 cursor-pointer"
               }`}
               id="file-drop-zone"
             >
@@ -494,7 +585,8 @@ export default function Scanner({ onScanComplete, isLoading, setIsLoading }: Sca
                   id="select-ocr-lang"
                   value={documentLanguage}
                   onChange={(e) => setDocumentLanguage(e.target.value)}
-                  className="w-full text-xs font-sans font-semibold rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-700 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50 appearance-none cursor-pointer"
+                  disabled={isLoading}
+                  className={`w-full text-xs font-sans font-semibold rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-700 outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50 appearance-none ${isLoading ? "bg-slate-50 text-slate-400 cursor-not-allowed" : "cursor-pointer"}`}
                 >
                   <option value="auto">🌐 Auto-Detect Language (Dynamic)</option>
                   
@@ -602,8 +694,8 @@ export default function Scanner({ onScanComplete, isLoading, setIsLoading }: Sca
             >
               {isLoading ? (
                 <>
-                  <RefreshCw className="w-4 h-4 animate-spin text-slate-400" />
-                  <span>{scanSpeedEstimate || "Scanning with Gemini..."}</span>
+                  <RefreshCw className="w-4 h-4 animate-spin text-emerald-400" />
+                  <span>Scanning... ({progressPercentage}%)</span>
                 </>
               ) : (
                 <>
@@ -614,12 +706,40 @@ export default function Scanner({ onScanComplete, isLoading, setIsLoading }: Sca
             </button>
           </div>
 
+          {/* Dynamic Progress Indicator (Requirement 5) */}
+          {isLoading && (
+            <div className="mt-4 p-4.5 bg-slate-50 border border-slate-100 rounded-xl space-y-3 animate-fadeIn">
+              <div className="flex justify-between items-center">
+                <span className="text-xs font-semibold text-slate-700 font-sans flex items-center gap-1.5">
+                  <RefreshCw className="w-3.5 h-3.5 text-emerald-500 animate-spin" />
+                  {progressPhase || "AI Analysis Stream Active..."}
+                </span>
+                <span className="text-xs font-bold font-mono text-emerald-600">
+                  {progressPercentage}%
+                </span>
+              </div>
+              
+              <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                <div 
+                  className="bg-emerald-500 h-full rounded-full transition-all duration-300 ease-out shadow-[0_0_8px_rgba(16,185,129,0.4)]"
+                  style={{ width: `${progressPercentage}%` }}
+                />
+              </div>
+              
+              <div className="flex justify-between items-center text-[10px] text-slate-400 font-sans">
+                <span>Phase: Intelligent OCR Visual Extraction</span>
+                <span>Optimized Pool: Gemini 3.5 &amp; 2.5 Flash</span>
+              </div>
+            </div>
+          )}
+
           <input
             ref={fileInputRef}
             type="file"
             accept="image/*"
             className="hidden"
             onChange={handleFileChange}
+            disabled={isLoading}
           />
         </div>
 
@@ -650,13 +770,18 @@ export default function Scanner({ onScanComplete, isLoading, setIsLoading }: Sca
               <button
                 key={item.id}
                 type="button"
+                disabled={isLoading}
                 onClick={() => triggerPreset(item.data)}
-                className="w-full text-left p-3.5 bg-slate-800/60 hover:bg-slate-800 border border-slate-700/50 hover:border-slate-600 rounded-xl transition-all cursor-pointer flex justify-between items-center group relative"
+                className={`w-full text-left p-3.5 border rounded-xl transition-all flex justify-between items-center group relative ${
+                  isLoading
+                    ? "bg-slate-800/20 border-slate-800 text-slate-500 cursor-not-allowed opacity-40"
+                    : "bg-slate-800/60 hover:bg-slate-800 border-slate-700/50 hover:border-slate-600 cursor-pointer"
+                }`}
                 id={`preset-${item.id}`}
               >
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="font-sans font-semibold text-slate-100 text-xs">
+                    <span className={`font-sans font-semibold text-xs ${isLoading ? "text-slate-500" : "text-slate-100"}`}>
                       {item.title}
                     </span>
                     <span className="text-[10px] font-mono px-2 py-0.5 bg-slate-700 text-slate-300 rounded-md">
