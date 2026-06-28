@@ -24,8 +24,49 @@ function getGeminiClient(): GoogleGenAI {
   return aiClient;
 }
 
+async function getCleanErrorMessage(err: any): Promise<string> {
+  if (!err) return "An unexpected error occurred during the visual image scan.";
+  
+  const rawMsg = err.message || String(err);
+  
+  // Try to find if there is a JSON string inside the message
+  let jsonStr = "";
+  if (rawMsg.includes("{") && rawMsg.includes("}")) {
+    const startIdx = rawMsg.indexOf("{");
+    const endIdx = rawMsg.lastIndexOf("}") + 1;
+    jsonStr = rawMsg.substring(startIdx, endIdx);
+  } else {
+    jsonStr = rawMsg;
+  }
+
+  try {
+    const parsed = JSON.parse(jsonStr);
+    if (parsed?.error?.message) {
+      return parsed.error.message;
+    }
+    if (parsed?.message) {
+      return parsed.message;
+    }
+  } catch {
+    // Not valid JSON, ignore
+  }
+
+  // Handle common codes or keywords manually if parsing fails
+  if (rawMsg.includes("503") || rawMsg.includes("UNAVAILABLE") || rawMsg.includes("demand")) {
+    return "The translation/OCR AI service is currently experiencing extremely high demand. Please try again in a few moments.";
+  }
+  if (rawMsg.includes("429") || rawMsg.includes("ResourceExhausted") || rawMsg.includes("limit")) {
+    return "The Gemini API rate limit has been exceeded. Please try again in a few moments.";
+  }
+  if (rawMsg.includes("API_KEY") || rawMsg.includes("API key")) {
+    return "Gemini API Key is missing or invalid. Please check your Settings (gear icon) > Secrets panel.";
+  }
+
+  return rawMsg;
+}
+
 async function generateContentWithRetry(client: GoogleGenAI, params: any, maxRetries = 3) {
-  const modelsToTry = ["gemini-3.5-flash", "gemini-flash-latest", "gemini-3.1-flash-lite"];
+  const modelsToTry = ["gemini-3.5-flash", "gemini-2.5-flash", "gemini-flash-latest", "gemini-3.1-flash-lite"];
   const errors: string[] = [];
   let lastError: any = null;
 
@@ -75,31 +116,11 @@ async function generateContentWithRetry(client: GoogleGenAI, params: any, maxRet
   const combinedErrorMessage = `All attempted Gemini models failed. Details:\n${errors.join("\n")}`;
   console.error(combinedErrorMessage);
   
-  // Extract clean human-readable details from the last error if it is a stringified JSON
-  let details = "Service Unavailable";
-  if (lastError) {
-    if (lastError.message) {
-      try {
-        const parsed = JSON.parse(lastError.message);
-        if (parsed?.error?.message) {
-          details = parsed.error.message;
-        } else {
-          details = lastError.message;
-        }
-      } catch {
-        details = lastError.message;
-      }
-    } else {
-      details = String(lastError);
-    }
-  }
+  // Extract clean human-readable details from the last error
+  const details = await getCleanErrorMessage(lastError);
 
   // Create a clean user-facing error message with helpful advice
-  const userFriendlyError = new Error(
-    "The translation/OCR AI service is currently experiencing extremely high demand. " +
-    "Please try again in a few moments, or check if your API Key in Settings is correctly configured. " +
-    `[Technical Details: ${details}]`
-  );
+  const userFriendlyError = new Error(details);
   
   throw userFriendlyError;
 }
@@ -209,8 +230,9 @@ async function startServer() {
 
     } catch (err: any) {
       console.error("Scan error occurred:", err);
+      const userMessage = await getCleanErrorMessage(err);
       return res.status(500).json({
-        error: err.message || "An unexpected error occurred during the visual image scan."
+        error: userMessage
       });
     }
   });

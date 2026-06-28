@@ -72,12 +72,6 @@ export default function AutoTyper({ document: doc, config, onChangeConfig }: Aut
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [wpmStats, setWpmStats] = useState(0);
   const [showConfidenceHighlights, setShowConfidenceHighlights] = useState(true);
-  const [hoveredToken, setHoveredToken] = useState<{
-    text: string;
-    confidence: number;
-    x: number;
-    y: number;
-  } | null>(null);
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
   const [customWpm, setCustomWpm] = useState<number>(240);
 
@@ -564,28 +558,10 @@ export default function AutoTyper({ document: doc, config, onChangeConfig }: Aut
                   className += " text-slate-800 ";
                 }
 
-                const handleMouseEnter = (e: MouseEvent<HTMLSpanElement>) => {
-                  if (!showConfidenceHighlights) return;
-                  const el = e.currentTarget;
-                  const rect = el.getBoundingClientRect();
-                  setHoveredToken({
-                    text: token.text,
-                    confidence: token.confidence,
-                    x: rect.left + rect.width / 2,
-                    y: rect.top - 6,
-                  });
-                };
-
-                const handleMouseLeave = () => {
-                  setHoveredToken(null);
-                };
-
                 return (
                   <span
                     key={idx}
                     className={className}
-                    onMouseEnter={handleMouseEnter}
-                    onMouseLeave={handleMouseLeave}
                   >
                     {displayText}
                   </span>
@@ -634,35 +610,6 @@ export default function AutoTyper({ document: doc, config, onChangeConfig }: Aut
           </button>
         </div>
       </div>
-
-      {/* Render single shared hover tooltip completely outside the selectable text tree with fixed positioning */}
-      {showConfidenceHighlights && hoveredToken && (
-        <div
-          style={{
-            position: "fixed",
-            left: `${hoveredToken.x}px`,
-            top: `${hoveredToken.y}px`,
-            transform: "translate(-50%, -100%)",
-          }}
-          className="pointer-events-none bg-slate-950/95 text-[10px] text-white px-2.5 py-1 rounded-xl shadow-2xl z-50 whitespace-nowrap font-sans flex items-center gap-1.5 border border-slate-800 tracking-normal leading-normal select-none"
-        >
-          <style>{`
-            .nocopy-tooltip-text::before {
-              content: "OCR Confidence: ";
-            }
-            .nocopy-tooltip-val::before {
-              content: attr(data-confidence);
-            }
-          `}</style>
-          <span className={`w-1.5 h-1.5 rounded-full ${hoveredToken.confidence < 80 ? 'bg-amber-400 animate-ping' : 'bg-emerald-400'} select-none`} />
-          <span className="select-none nocopy-tooltip-text text-slate-200">
-            <strong 
-              data-confidence={`${hoveredToken.confidence}%`}
-              className={`nocopy-tooltip-val select-none ${hoveredToken.confidence < 80 ? 'text-amber-300' : 'text-emerald-300'}`} 
-            />
-          </span>
-        </div>
-      )}
     </div>
   );
 }
